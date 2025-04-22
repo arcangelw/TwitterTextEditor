@@ -319,6 +319,46 @@ public protocol TextEditorViewPasteObserver: AnyObject {
     func transformItemProvider(_ itemProvider: NSItemProvider, completion: TextEditorViewPasteObserverTransformCompletion)
 }
 
+
+/**
+ A protocol that delegates the task of updating placeholder text attributes in a text editor view.
+
+ This delegate is specifically responsible for providing updated styling (such as font, color, etc.)
+ for the placeholder text displayed by the `TextEditorView`.
+
+ - SeeAlso:
+   - `TextEditorView.placeholderTextAttributesDelegate`: Use this delegate for updating regular editing content.
+ */
+public protocol TextEditorViewPlaceholderTextAttributesDelegate: AnyObject {
+    
+    /**
+     Asks the delegate to provide updated text attributes for the placeholder text.
+
+     This method is called only when the placeholder text attributes need to be updated,
+     such as in response to theme changes or dynamic styling requirements.
+
+     The update can be performed asynchronously. The delegate **must** eventually call the `completion` handler
+     with an updated `NSAttributedString`, or `nil` if no update is needed.
+
+     This method may be called again before a previous call has completed; in that case,
+     the text editor view will always use the latest result and ignore any outdated completions.
+
+     > Important: The `string` content of the `attributedString` must **not** be modified. Only attributes should be updated.
+
+     - Parameters:
+       - textEditorView: The `TextEditorView` requesting the update.
+       - attributedString: The current attributed string used for the placeholder text.
+       - completion: A closure that must be called with the updated attributed string, or `nil` if no changes are needed.
+
+     - SeeAlso:
+       - `TextEditorView.updatePlaceholderTextView()`
+       - `TextEditorView.placeholderTextAttributesDelegate`
+    */
+    func textEditorView(_ textEditorView: TextEditorView,
+                        updatePlaceholderAttributedString attributedString: NSAttributedString,
+                        completion: @escaping (NSAttributedString) -> Void)
+}
+
 // MARK: -
 
 private extension TextView {
@@ -342,6 +382,7 @@ public final class TextEditorView: UIView {
 
     private var userInteractionDidChangeTextViewScheduler: DebounceScheduler!
     private var updatePlaceholderTextScheduler: DebounceScheduler!
+    private var updatePlaceholderTextAttributesScheduler: ContentFilterScheduler<NSAttributedString, NSAttributedString?>!
     private var updateTextAttributesScheduler: ContentFilterScheduler<NSAttributedString, NSAttributedString?>!
 
     /**
@@ -432,6 +473,27 @@ public final class TextEditorView: UIView {
             self?.updatePlaceholderText()
         }
 
+        
+        /// Schedules and delegates asynchronous updates for placeholder text attributes.
+        ///
+        /// This scheduler handles asynchronous updates for placeholder styling via
+        /// `TextEditorViewPlaceholderTextAttributesDelegate`. If no delegate is assigned,
+        /// it simply passes through the input without modification.
+        ///
+        /// - Note: This scheduler is typically triggered by `updatePlaceholderTextView()`
+        ///   and performs optional asynchronous updates to placeholder appearance.
+        updatePlaceholderTextAttributesScheduler = ContentFilterScheduler { [weak self] input, completion in
+            guard let self = self,
+                  let placeholderTextAttributesDelegate = self.placeholderTextAttributesDelegate else {
+                completion(.success(input))
+                return
+            }
+            placeholderTextAttributesDelegate.textEditorView(self, updatePlaceholderAttributedString: input) { output in
+                completion(.success(output))
+            }
+        }
+
+        
         /*
          UIKit behavior note
 
@@ -974,6 +1036,29 @@ public final class TextEditorView: UIView {
         }
     }
 
+    /**
+     The default paragraph style applied to newly inserted or typed text.
+
+     This value affects how new paragraphs are formatted, including properties like line spacing, alignment, and indentation.
+     Updating this property also updates the placeholder and refreshes the attributed text styling.
+
+     - SeeAlso:
+       - `textAttributesDelegate`
+       - `typingAttributes`
+       - `NSParagraphStyle`
+     */
+    public var defaultParagraphStyle: NSParagraphStyle? {
+        get {
+            textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
+        }
+        set {
+            textView.typingAttributes[.paragraphStyle] = newValue
+
+            updatePlaceholderTextView()
+            setNeedsUpdateTextAttributes()
+        }
+    }
+
     // MARK: - Properties (Scroll View)
 
     // TODO: Consider to not expose scroll view as scroll view.
@@ -1101,6 +1186,8 @@ public final class TextEditorView: UIView {
 
     private var placeholderTextView: UITextView?
 
+    private var placeholderTextViewBottomAnchorConstraint: NSLayoutConstraint?
+
     private func preparePlaceholderTextView() {
         if placeholderText != nil {
             guard placeholderTextView == nil else {
@@ -1141,12 +1228,15 @@ public final class TextEditorView: UIView {
 
             placeholderTextView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                placeholderTextView.topAnchor.constraint(equalTo: textView.textInputView.topAnchor),
-                placeholderTextView.leadingAnchor.constraint(equalTo: textView.textInputView.leadingAnchor),
-                placeholderTextView.trailingAnchor.constraint(equalTo: textView.textInputView.trailingAnchor)
+                placeholderTextView.widthAnchor.constraint(equalTo: textView.frameLayoutGuide.widthAnchor),
+                placeholderTextView.topAnchor.constraint(equalTo: textView.contentLayoutGuide.topAnchor),
+                placeholderTextView.leadingAnchor.constraint(equalTo: textView.contentLayoutGuide.leadingAnchor),
+                placeholderTextView.trailingAnchor.constraint(equalTo: textView.contentLayoutGuide.trailingAnchor)
             ])
-
+            let bottomAnchorConstraint = placeholderTextView.bottomAnchor.constraint(equalTo: textView.contentLayoutGuide.bottomAnchor)
+            bottomAnchorConstraint.isActive = placeholderTextShouldFillContent
             self.placeholderTextView = placeholderTextView
+            self.placeholderTextViewBottomAnchorConstraint = bottomAnchorConstraint
         } else {
             guard let placeholderTextView = placeholderTextView else {
                 return
@@ -1154,12 +1244,14 @@ public final class TextEditorView: UIView {
 
             placeholderTextView.removeFromSuperview()
             self.placeholderTextView = nil
+            self.placeholderTextViewBottomAnchorConstraint = nil
         }
     }
 
     private func updatePlaceholderTextView() {
         guard let placeholderText = placeholderText,
-              let placeholderTextView = placeholderTextView else
+              let placeholderTextView = placeholderTextView,
+              let placeholderTextViewBottomAnchorConstraint = placeholderTextViewBottomAnchorConstraint else
         {
             return
         }
@@ -1169,10 +1261,16 @@ public final class TextEditorView: UIView {
         // See `textStorage(_:didProcessEditing:range:changeInLength:)`.
         guard textStorage.string.isEmpty else {
             placeholderTextView.isHidden = true
+            if placeholderTextViewBottomAnchorConstraint.isActive {
+                placeholderTextViewBottomAnchorConstraint.isActive = false
+                textView.contentSize = .init(width: textView.contentSize.width, height: textView.textInputView.frame.size.height)
+                setNeedsUpdateTextAttributes()
+            }
             return
         }
 
         placeholderTextView.isHidden = false
+        placeholderTextViewBottomAnchorConstraint.isActive = placeholderTextShouldFillContent
 
         placeholderTextView.textContainerInset = textView.textContainerInset
 
@@ -1201,10 +1299,18 @@ public final class TextEditorView: UIView {
            - `-[UITextView setTextAlignment:]`
          */
         let attributedText = NSAttributedString(string: placeholderText, attributes: textView.typingAttributes)
-        placeholderTextView.attributedText = attributedText
-
-        // UIKit is by default using `systemGray` for each placeholder.
-        placeholderTextView.textColor = placeholderTextColor ?? UIColor.systemGray
+        updatePlaceholderTextAttributesScheduler.schedule(attributedText) { [weak self] result in
+            guard let self = self, let placeholderTextView = self.placeholderTextView else {
+                return
+            }
+            guard case let .success(output) = result else {
+                log(type: .debug, "Cancel update placeholder text attributes: %@, result: %@", placeholderText, String(describing: result))
+                return
+            }
+            placeholderTextView.attributedText = output
+            // UIKit is by default using `systemGray` for each placeholder.
+            placeholderTextView.textColor = self.placeholderTextColor ?? UIColor.systemGray
+        }
     }
 
     private func updateTextViewAccessibilityLabel() {
@@ -1306,6 +1412,35 @@ public final class TextEditorView: UIView {
             updatePlaceholderText()
         }
     }
+
+    /**
+     Determines whether the placeholder text view should fill the full content height.
+     If set to `true`, the placeholder text view will stretch to match the full content height of the text view.
+     This is useful when you want the placeholder to visually align with the full text input area.
+
+     Defaults to `false`
+
+     - SeeAlso:
+       - `maximumNumberOfLinesForPlaceholderText`
+       - `placeholderText`
+       - `placeholderTextLineBreakMode`
+     */
+    public var placeholderTextShouldFillContent: Bool = false {
+        didSet {
+            guard oldValue != placeholderTextShouldFillContent else {
+                return
+            }
+            updatePlaceholderText()
+        }
+    }
+    
+    /**
+     The delegate to update text attributes.
+
+     - SeeAlso:
+       - `TextEditorViewPlaceholderTextAttributesDelegate`
+     */
+    public weak var placeholderTextAttributesDelegate: TextEditorViewPlaceholderTextAttributesDelegate?
 
     // MARK: - Properties (UITextView)
 

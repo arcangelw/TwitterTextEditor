@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		335CEF532DB6597800BF7F5F /* LookinServer in Frameworks */ = {isa = PBXBuildFile; productRef = 335CEF522DB6597800BF7F5F /* LookinServer */; };
 		5413B885249A7D32003873A4 /* KeyboardGuide in Frameworks */ = {isa = PBXBuildFile; productRef = 5413B884249A7D32003873A4 /* KeyboardGuide */; };
 		5413B889249A9882003873A4 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5413B888249A9882003873A4 /* String.swift */; };
 		54301AD424DF4CDF00B89EA9 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 54301AD324DF4CDF00B89EA9 /* README.md */; };
@@ -70,6 +71,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5413B885249A7D32003873A4 /* KeyboardGuide in Frameworks */,
+				335CEF532DB6597800BF7F5F /* LookinServer in Frameworks */,
 				5440D77224A0394C00C9C0C9 /* TwitterTextEditor-Auto in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -188,6 +190,7 @@
 			packageProductDependencies = (
 				5413B884249A7D32003873A4 /* KeyboardGuide */,
 				5440D77124A0394C00C9C0C9 /* TwitterTextEditor-Auto */,
+				335CEF522DB6597800BF7F5F /* LookinServer */,
 			);
 			productName = Example;
 			productReference = 545481D6242C987D00EDFF7D /* Example.app */;
@@ -220,6 +223,7 @@
 			mainGroup = 545481CD242C987D00EDFF7D;
 			packageReferences = (
 				5413B883249A7D32003873A4 /* XCRemoteSwiftPackageReference "KeyboardGuide" */,
+				335CEF512DB6597800BF7F5F /* XCRemoteSwiftPackageReference "LookinServer" */,
 			);
 			productRefGroup = 545481D7242C987D00EDFF7D /* Products */;
 			projectDirPath = "";
@@ -328,7 +332,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -382,7 +386,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -402,6 +406,7 @@
 				CODE_SIGN_STYLE = Manual;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = NO;
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -427,6 +432,7 @@
 				CODE_SIGN_STYLE = Manual;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = NO;
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -465,6 +471,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		335CEF512DB6597800BF7F5F /* XCRemoteSwiftPackageReference "LookinServer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/QMUI/LookinServer.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.8;
+			};
+		};
 		5413B883249A7D32003873A4 /* XCRemoteSwiftPackageReference "KeyboardGuide" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/niw/KeyboardGuide";
@@ -476,6 +490,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		335CEF522DB6597800BF7F5F /* LookinServer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 335CEF512DB6597800BF7F5F /* XCRemoteSwiftPackageReference "LookinServer" */;
+			productName = LookinServer;
+		};
 		5413B884249A7D32003873A4 /* KeyboardGuide */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5413B883249A7D32003873A4 /* XCRemoteSwiftPackageReference "KeyboardGuide" */;

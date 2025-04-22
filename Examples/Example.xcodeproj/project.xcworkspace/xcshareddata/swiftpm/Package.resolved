@@ -1,0 +1,23 @@
+{
+  "pins" : [
+    {
+      "identity" : "keyboardguide",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/niw/KeyboardGuide",
+      "state" : {
+        "revision" : "3cd7e801007f45085260e85143aaf90cd2c774b9",
+        "version" : "0.2.3"
+      }
+    },
+    {
+      "identity" : "lookinserver",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/QMUI/LookinServer.git",
+      "state" : {
+        "revision" : "e553d1b689d147817dc54ad5c28fcff71e860101",
+        "version" : "1.2.8"
+      }
+    }
+  ],
+  "version" : 2
+}
